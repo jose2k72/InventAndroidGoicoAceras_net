@@ -12,6 +12,8 @@
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -33,6 +35,50 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Dapper, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Dapper.2.0.151\lib\net461\Dapper.dll</HintPath>
+    </Reference>
+    <Reference Include="gdalconst_csharp, Version=3.11.3.0, Culture=neutral, PublicKeyToken=db5a52b08dc5b321, processorArchitecture=MSIL">
+      <HintPath>..\packages\GDAL.3.11.3\lib\netstandard2.0\gdalconst_csharp.dll</HintPath>
+    </Reference>
+    <Reference Include="gdal_csharp, Version=3.11.3.0, Culture=neutral, PublicKeyToken=db5a52b08dc5b321, processorArchitecture=MSIL">
+      <HintPath>..\packages\GDAL.3.11.3\lib\netstandard2.0\gdal_csharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Data.Sqlite, Version=8.0.2.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Data.Sqlite.Core.8.0.2\lib\netstandard2.0\Microsoft.Data.Sqlite.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="ogr_csharp, Version=3.11.3.0, Culture=neutral, PublicKeyToken=db5a52b08dc5b321, processorArchitecture=MSIL">
+      <HintPath>..\packages\GDAL.3.11.3\lib\netstandard2.0\ogr_csharp.dll</HintPath>
+    </Reference>
+    <Reference Include="osr_csharp, Version=3.11.3.0, Culture=neutral, PublicKeyToken=db5a52b08dc5b321, processorArchitecture=MSIL">
+      <HintPath>..\packages\GDAL.3.11.3\lib\netstandard2.0\osr_csharp.dll</HintPath>
+    </Reference>
+    <Reference Include="SQLitePCLRaw.core, Version=2.1.8.2226, Culture=neutral, PublicKeyToken=1488e028ca7ab535, processorArchitecture=MSIL">
+      <HintPath>..\packages\SQLitePCLRaw.core.2.1.8\lib\netstandard2.0\SQLitePCLRaw.core.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="SQLitePCLRaw.batteries_v2">
+      <HintPath>..\packages\SQLitePCLRaw.bundle_e_sqlcipher.2.1.8\lib\net461\SQLitePCLRaw.batteries_v2.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="SQLitePCLRaw.provider.dynamic_cdecl, Version=2.1.8.2226, Culture=neutral, PublicKeyToken=b68184102cba0b3b, processorArchitecture=MSIL">
+      <HintPath>..\packages\SQLitePCLRaw.provider.dynamic_cdecl.2.1.8\lib\netstandard2.0\SQLitePCLRaw.provider.dynamic_cdecl.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Memory, Version=4.0.1.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Memory.4.5.3\lib\netstandard2.0\System.Memory.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=4.0.4.1, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.4.5.2\lib\netstandard2.0\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.VisualBasic" />
+    <Reference Include="NLog, Version=6.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
+      <HintPath>..\packages\NLog.6.0.1\lib\net46\NLog.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -46,16 +92,33 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Form1.cs">
+    <Compile Include="FrmProcess.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Form1.Designer.cs">
-      <DependentUpon>Form1.cs</DependentUpon>
+    <Compile Include="FrmProcess.Designer.cs">
+      <DependentUpon>FrmProcess.cs</DependentUpon>
     </Compile>
+    <Compile Include="FrmMsSqlOpen.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmMsSqlOpen.Designer.cs">
+      <DependentUpon>FrmMsSqlOpen.cs</DependentUpon>
+    </Compile>
+    <Compile Include="GdalConfiguration.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <EmbeddedResource Include="Form1.resx">
-      <DependentUpon>Form1.cs</DependentUpon>
+    <Compile Include="FrmSetDatas.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FrmSetDatas.Designer.cs">
+      <DependentUpon>FrmSetDatas.cs</DependentUpon>
+    </Compile>
+    <EmbeddedResource Include="FrmProcess.resx">
+      <DependentUpon>FrmProcess.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FrmMsSqlOpen.resx">
+      <DependentUpon>FrmMsSqlOpen.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
@@ -66,6 +129,7 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -79,5 +143,59 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\LATINOGIS\f472Ltn\f2latinoobjects\OLatino.csproj">
+      <Project>{9F94A558-72A0-487A-8576-A194C516A532}</Project>
+      <Name>OLatino</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\LATINOGIS\f472Ltn\LtnToWkt.Bwl\LtnToWkt.Bwl.csproj">
+      <Project>{55A24982-6FEE-4A8D-B68A-795D7AD54ADB}</Project>
+      <Name>LtnToWkt.Bwl</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\LATINOGIS\Sgrin.Utils\Sgrin.Gdal\Sgrin.Gdal.csproj">
+      <Project>{094f199c-534d-47b3-b5b2-6438926e3b25}</Project>
+      <Name>Sgrin.Gdal</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\LATINOGIS\Sgrin.Utils\Sgrin.Models\Sgrin.Models.csproj">
+      <Project>{cd8ec4bd-a205-4660-8af8-4519712d34d9}</Project>
+      <Name>Sgrin.Models</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\LATINOGIS\Sgrin.Utils\Sgrin.Wkt.Gdal\Sgrin.Wkt.Gdal.csproj">
+      <Project>{ca2af3c7-ad59-4737-b9de-abef4fd8029e}</Project>
+      <Name>Sgrin.Wkt.Gdal</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\LATINOGIS\Sgrin.Utils\Sgrin.Wkt\Sgrin.Wkt.csproj">
+      <Project>{970817a0-cfcb-4b2f-8811-cd21460b0617}</Project>
+      <Name>Sgrin.Wkt</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\YASoft.Utils\YASoft.Dapper\YASoft.Dapper.csproj">
+      <Project>{061b1b5d-f26b-4a26-9388-237bfa4b51ce}</Project>
+      <Name>YASoft.Dapper</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\YASoft.Utils\YASoft.Utils\YASoft.Utils.csproj">
+      <Project>{f7a5843c-1b1b-4f8b-9124-7777b454b89c}</Project>
+      <Name>YASoft.Utils</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\YASoft.Utils\YASoft.WinForms\YASoft.WinForms.csproj">
+      <Project>{758cc459-69f5-467e-ba7a-2e593f5c9aa8}</Project>
+      <Name>YASoft.WinForms</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Aceras.Models\Aceras.Models.csproj">
+      <Project>{1abd8719-c900-4390-9ebc-ca0130a59c52}</Project>
+      <Name>Aceras.Models</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Actions\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="..\packages\GDAL.Native.3.11.3\build\netstandard2.0\GDAL.Native.targets" Condition="Exists('..\packages\GDAL.Native.3.11.3\build\netstandard2.0\GDAL.Native.targets')" />
+  <Import Project="..\packages\SQLitePCLRaw.lib.e_sqlcipher.2.1.8\buildTransitive\net461\SQLitePCLRaw.lib.e_sqlcipher.targets" Condition="Exists('..\packages\SQLitePCLRaw.lib.e_sqlcipher.2.1.8\buildTransitive\net461\SQLitePCLRaw.lib.e_sqlcipher.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\GDAL.Native.3.11.3\build\netstandard2.0\GDAL.Native.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\GDAL.Native.3.11.3\build\netstandard2.0\GDAL.Native.targets'))" />
+    <Error Condition="!Exists('..\packages\SQLitePCLRaw.lib.e_sqlcipher.2.1.8\buildTransitive\net461\SQLitePCLRaw.lib.e_sqlcipher.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\SQLitePCLRaw.lib.e_sqlcipher.2.1.8\buildTransitive\net461\SQLitePCLRaw.lib.e_sqlcipher.targets'))" />
+  </Target>
 </Project>

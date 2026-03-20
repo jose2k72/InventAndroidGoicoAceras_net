@@ -1,0 +1,38 @@
+<Project>
+  <PropertyGroup>
+    <!-- 
+      Configuración de MSBuild Path Routing: SisCatNet Global Workspace
+      Este archivo permite la portabilidad de los proyectos de LatinoGIS entre diferentes máquinas.
+    -->
+
+    <!-- Raíz del Workspace/Repositorio (Al mismo nivel que este archivo) -->
+    <ProjectsRoot Condition="'$(ProjectsRoot)' == ''">$(MSBuildThisFileDirectory)</ProjectsRoot>
+    
+    <!-- Raíz Global (D:\SRC.PROJECTS\) - Calculada subiendo 3 niveles desde el workspace -->
+    <!-- Estructura: SRC.PROJECTS / CR.GOICO(CADIC) / DATA.CAPTURE / src.net.aceras -->
+    <GlobalRoot>$(MSBuildThisFileDirectory)..\..\..\</GlobalRoot>
+    
+    <!-- Repositorios Base de LatinoGIS (Variables Dinámicas) -->
+    <YASoftRoot Condition="'$(YASoftRoot)' == ''">$(GlobalRoot)YASoft.Utils\</YASoftRoot>
+    <f472LtnRoot Condition="'$(f472LtnRoot)' == ''">$(GlobalRoot)LATINOGIS\f472Ltn\</f472LtnRoot>
+    <SgrinUtilsRoot Condition="'$(SgrinUtilsRoot)' == ''">$(GlobalRoot)LATINOGIS\Sgrin.Utils\</SgrinUtilsRoot>
+
+    <!-- Ruta Localizada para Restauración de Paquetes NuGet -->
+    <RestorePackagesPath>$(ProjectsRoot)packages</RestorePackagesPath>
+
+    <!-- Propiedades de Compilación Comunes -->
+    <TargetFrameworkVersion Condition="'$(TargetFrameworkVersion)' == ''">v4.8.1</TargetFrameworkVersion>
+    <LangVersion>10.0</LangVersion>
+    <Deterministic>true</Deterministic>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+  </PropertyGroup>
+
+  <!-- Definiciones de Importación (Opcional: Si se desea forzar el uso de estas rutas) -->
+  <PropertyGroup>
+    <OutputPath>bin\$(Configuration)\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+</Project>
