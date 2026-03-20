@@ -1,10 +1,14 @@
 using Aceras.Models.Dto;
 using Aceras.Models.Mappers;
+using Aceras.Models.SqLiteTables;
 using Dapper;
+using LtnToWkt;
+using LtnToWkt.Model;
 using Microsoft.Data.Sqlite;
 using NLog;
 using NLog.Config;
 using NLog.Targets;
+using OLatino;
 using Sgrin.Models;
 using Sgrin.Wkt;
 using Sgrin.Wkt.Gdal;
@@ -16,12 +20,11 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Drawing;
 using System.Linq;
+using System.Runtime.Remoting;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using LtnToWkt;
-using OLatino;
 using YASoft.Dapper.DapperQueryUtils;
 using YASoft.Utils.Static.Serialization;
 
@@ -122,6 +125,146 @@ namespace Extract.To.Ltn
             }
         }
 
+        private void DoWork(CancellationToken token)
+        {
+            _targetTable = _targetTable.Replace(new[] { "dbo.","[dbo]." }, "", StringComparison.InvariantCultureIgnoreCase);
+            _targetTable = _targetTable.Replace(new[] { "[","]" }, "");
+
+            var ltnTable = $"LtnElements_{_targetTable}";
+            var dataTable = $"{_targetTable}";
+
+
+            var converter = Wkt2WktCoordProjGdalConverter.FromEpsgCode(4326, 32616, ignoreZ: true, preSwapXy: true, postScaleFactor: 1000);
+            object objRef;
+            var layer = 1;
+
+            try
+            {
+                Logger.Info("Validando conexión a base de datos destino...");
+                using (var sqlConnection = new SqlConnection(_connString))
+                {
+                    sqlConnection.Open();
+
+                    sqlConnection.GrantLtnElementsTable(ltnTable, overwrite: true);
+                    GrantDataTable(sqlConnection, dataTable);
+                    GrantLtnConfig(sqlConnection, dataTable, layer);
+
+
+                    Logger.Info("Validando conexión a base de datos origen...");
+                    using (var sqliteConnection = GetSqliteConnection())
+                    {
+                        Logger.Info("Conexión SQLite exitosa.");
+
+                        var ltnId = 0;
+                        
+                        foreach (var srcData in sqliteConnection.GetData<Aceras.Models.SqLiteTables.DataTable>("DATOS"))
+                        {
+                            ltnId++;
+                            Logger.Info($"Extrayendo punto {ltnId}...");
+
+                            var aceraDto = DataJsonSerialization<AceraDto>.ReadDataFromJsonString(srcData.DATOS, indented: false,
+                                typeNameHandling: false);
+
+                            Logger.Info($"Mapeando DTO");
+                            var acera = AceraMapper.MapToTable(aceraDto);
+
+                            var wkt = $"POINT({acera.Lng} {acera.Lat})";
+                            Logger.Info($"Creando Wkt: {wkt}");
+
+                            Logger.Info($"Reproyectando 4326 => 32616 y escalando en 1000");
+                            wkt = converter.WktTransform(wkt);
+                            Logger.Info($"Wkt reproyectado y esacalado: {wkt}");
+
+                            Logger.Info($"Generando Ltn Point");
+                            var ltnElement = LtnWktMapper.WKTToLtn(LtnNType.EPoint, wkt);
+                            var dbLtnElement = ltnElement.ToDbLtnElement();
+
+                            dbLtnElement.LtnId = ltnId;
+                            dbLtnElement.Layer = (short)layer;
+                            acera.LtnId = ltnId;
+                            
+                            Logger.Info($"Almacenando Ltn en: {ltnTable}");
+                            objRef = dbLtnElement; // Para debugging, inspeccionar este objeto en tiempo de ejecución
+                            sqlConnection.InsertData(ltnTable, ref objRef, keyName: "FP");
+
+                            Logger.Info($"Almacenando Dato vinculado en: {dataTable}");
+                            objRef = acera; // Para debugging, inspeccionar este objeto en tiempo de ejecución
+                            sqlConnection.InsertData(dataTable, ref objRef);
+
+                            Thread.Sleep(3);
+                        }
+
+                        // Simulador de carga por ahora
+                        //for (int i = 1; i <= 100; i++)
+                        //{
+                        //    token.ThrowIfCancellationRequested();
+
+                        //    Logger.Info($"Procesando lote {i}...");
+
+                        //    if (i % 10 == 0) Logger.Warn($"Advertencia en lote {i}: Latencia detectada.");
+                        //    if (i % 25 == 0) Logger.Error(new Exception("Error simulado"), $"Fallo no crítico en lote {i}.");
+
+                        //    Thread.Sleep(100); // Simulación de carga
+                        //}
+
+                    }
+
+                }
+
+                
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Error crítico: No se pudo abrir el archivo SQLite origen.");
+                throw; // Detener el proceso si no se puede conectar
+            }
+        }
+
+        private void GrantDataTable(SqlConnection conn, string tableName)
+        {
+            var (sqlDropDataTable, sqlCreateDataTable) = CreateDataTableSqlStr(tableName);
+
+            conn.Execute(sqlDropDataTable);
+            conn.Execute(sqlCreateDataTable);
+        }
+
+        private void GrantLtnConfig(SqlConnection conn, string tableName, int layer)
+        {
+            var sql = $@"
+            IF OBJECT_ID('LtnConfig', 'U') IS NULL
+            BEGIN
+                CREATE TABLE LtnConfig (
+                    Layer int NOT NULL,
+                    TableName nvarchar(50),
+                    LtnJoin nvarchar(250),
+                    SQLQUERY nvarchar(250),
+                    CONSTRAINT PK_LtnConfig PRIMARY KEY (Layer)
+                )
+            END
+            ";
+
+            conn.Execute(sql);
+
+            var config = conn.GetData<dbLtnConfig>("LtnConfig", queryCondition: $"Layer = {layer}").FirstOrDefault();
+
+            if (config != null)
+            {
+                config.TableName = tableName;
+                conn.UpdateData("LtnConfig", config, keyName: "Layer");
+            }
+            else
+            {
+                config = new dbLtnConfig
+                {
+                    Layer = layer,
+                    TableName = tableName
+                };
+
+                object objRef = config;
+                conn.InsertData("LtnConfig", ref objRef);
+            }
+        }
+
         private (string, string) CreateDataTableSqlStr(string tableName)
         {
             var sqlDropDataTable = $@"
@@ -219,99 +362,6 @@ namespace Extract.To.Ltn
             ";
 
             return (sqlDropDataTable, sqlCreateDataTable);
-        }
-
-        private void DoWork(CancellationToken token)
-        {
-            _targetTable = _targetTable.Replace(new[] { "dbo.","[dbo]." }, "", StringComparison.InvariantCultureIgnoreCase);
-            _targetTable = _targetTable.Replace(new[] { "[","]" }, "");
-
-            var ltnTable = $"LtnElements_{_targetTable}";
-            var dataTable = $"{_targetTable}";
-
-
-            var (sqlDropDataTable, sqlCreateDataTable) = CreateDataTableSqlStr(dataTable);
-
-            var converter = Wkt2WktCoordProjGdalConverter.FromEpsgCode(4326, 32616, ignoreZ: true, preSwapXy: true, postScaleFactor: 1000);
-            object objRef;
-
-            try
-            {
-                Logger.Info("Validando conexión a base de datos destino...");
-                using (var sqlConnection = new SqlConnection(_connString))
-                {
-                    sqlConnection.Open();
-
-                    sqlConnection.GrantLtnElementsTable(ltnTable, overwrite: true);
-
-                    sqlConnection.Execute(sqlDropDataTable);
-                    sqlConnection.Execute(sqlCreateDataTable);
-
-                    Logger.Info("Validando conexión a base de datos origen...");
-                    using (var sqliteConnection = GetSqliteConnection())
-                    {
-                        Logger.Info("Conexión SQLite exitosa.");
-
-                        var ltnId = 0;
-
-                        foreach (var srcData in sqliteConnection.GetData<Aceras.Models.SqLiteTables.DataTable>("DATOS"))
-                        {
-                            ltnId++;
-                            Logger.Info($"Extrayendo punto {ltnId}...");
-
-                            var aceraDto = DataJsonSerialization<AceraDto>.ReadDataFromJsonString(srcData.DATOS, indented: false,
-                                typeNameHandling: false);
-
-                            Logger.Info($"Mapeando DTO");
-                            var acera = AceraMapper.MapToTable(aceraDto);
-
-                            var wkt = $"POINT({acera.Lng} {acera.Lat})";
-                            Logger.Info($"Creando Wkt: {wkt}");
-
-                            Logger.Info($"Reproyectando 4326 => 32616 y escalando en 1000");
-                            wkt = converter.WktTransform(wkt);
-                            Logger.Info($"Wkt reproyectado y esacalado: {wkt}");
-
-                            Logger.Info($"Generando Ltn Point");
-                            var ltnElement = LtnWktMapper.WKTToLtn(LtnNType.EPoint, wkt);
-                            var dbLtnElement = ltnElement.ToDbLtnElement();
-
-                            dbLtnElement.LtnId = ltnId;
-                            acera.LtnId = ltnId;
-                            
-                            Logger.Info($"Almacenando Ltn en: {ltnTable}");
-                            objRef = dbLtnElement; // Para debugging, inspeccionar este objeto en tiempo de ejecución
-                            sqlConnection.InsertData(ltnTable, ref objRef, keyName: "FP");
-
-                            Logger.Info($"Almacenando Dato vinculado en: {dataTable}");
-                            objRef = acera; // Para debugging, inspeccionar este objeto en tiempo de ejecución
-                            sqlConnection.InsertData(dataTable, ref objRef);
-                        }
-
-                        // Simulador de carga por ahora
-                        //for (int i = 1; i <= 100; i++)
-                        //{
-                        //    token.ThrowIfCancellationRequested();
-
-                        //    Logger.Info($"Procesando lote {i}...");
-
-                        //    if (i % 10 == 0) Logger.Warn($"Advertencia en lote {i}: Latencia detectada.");
-                        //    if (i % 25 == 0) Logger.Error(new Exception("Error simulado"), $"Fallo no crítico en lote {i}.");
-
-                        //    Thread.Sleep(100); // Simulación de carga
-                        //}
-
-                    }
-
-                }
-
-                
-            }
-            catch (Exception ex)
-            {
-                Logger.Error(ex, "Error crítico: No se pudo abrir el archivo SQLite origen.");
-                throw; // Detener el proceso si no se puede conectar
-            }
         }
 
         private void btnParar_Click(object sender, EventArgs e)
