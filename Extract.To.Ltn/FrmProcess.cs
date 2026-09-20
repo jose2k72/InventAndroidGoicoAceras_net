@@ -102,7 +102,7 @@ namespace Extract.To.Ltn
 
             try
             {
-                await Task.Run(() => DoWork(_cts.Token), _cts.Token);
+                await RunInSTAThreadAsync(() => DoWork(_cts.Token));
                 Logger.Info("Proceso finalizado correctamente.");
             }
             catch (OperationCanceledException)
@@ -123,6 +123,26 @@ namespace Extract.To.Ltn
                 btnExportWarn.Enabled = txtLogWarn.TextLength > 0;
                 btnExportErr.Enabled = txtLogErr.TextLength > 0;
             }
+        }
+
+        private Task RunInSTAThreadAsync(Action action)
+        {
+            var tcs = new TaskCompletionSource<bool>();
+            var thread = new Thread(() =>
+            {
+                try
+                {
+                    action();
+                    tcs.SetResult(true);
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                }
+            });
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.Start();
+            return tcs.Task;
         }
 
         private void DoWork(CancellationToken token)
@@ -441,31 +461,47 @@ namespace Extract.To.Ltn
         public class RichTextBoxTarget : TargetWithLayout
         {
             private readonly RichTextBox _textBox;
+            private readonly System.Collections.Concurrent.ConcurrentQueue<string> _logQueue = new System.Collections.Concurrent.ConcurrentQueue<string>();
+            private readonly System.Windows.Forms.Timer _timer;
 
             public RichTextBoxTarget(RichTextBox textBox)
             {
                 _textBox = textBox;
+                _timer = new System.Windows.Forms.Timer();
+                _timer.Interval = 200; // Refresco cada 200ms
+                _timer.Tick += Timer_Tick;
+                _timer.Start();
+            }
+
+            private void Timer_Tick(object sender, EventArgs e)
+            {
+                if (_logQueue.IsEmpty) return;
+
+                StringBuilder sb = new StringBuilder();
+                while (_logQueue.TryDequeue(out string message))
+                {
+                    sb.Append(message);
+                }
+
+                if (sb.Length > 0)
+                {
+                    _textBox.AppendText(sb.ToString());
+                    _textBox.SelectionStart = _textBox.Text.Length;
+                    _textBox.ScrollToCaret();
+                }
             }
 
             protected override void Write(LogEventInfo logEvent)
             {
                 string message = RenderLogEvent(Layout, logEvent) + Environment.NewLine;
-
-                if (_textBox.InvokeRequired)
-                {
-                    _textBox.BeginInvoke(new Action(() => AppendText(message)));
-                }
-                else
-                {
-                    AppendText(message);
-                }
+                _logQueue.Enqueue(message);
             }
 
-            private void AppendText(string message)
+            protected override void CloseTarget()
             {
-                _textBox.AppendText(message);
-                _textBox.SelectionStart = _textBox.Text.Length;
-                _textBox.ScrollToCaret();
+                _timer?.Stop();
+                _timer?.Dispose();
+                base.CloseTarget();
             }
         }
     }
